@@ -1,25 +1,41 @@
+import { fetchWeatherApi } from "openmeteo";
 import { openai } from "@ai-sdk/openai";
 import { generateText, tool } from "ai";
 import "dotenv/config";
 import { z } from "zod";
+import { differenceInDays } from "date-fns";
+
+const calculateDaysFromNow = (endDate: Date): number => {
+  const today = new Date();
+  return differenceInDays(endDate, today);
+};
 
 const main = async () => {
   const result = await generateText({
     model: openai("gpt-4o-mini"),
-    prompt: "What is the weather in Luxembourg and what should I do?",
+    prompt:
+      "I am going to Luxembourg on this 6/12/24 - 8/12/24. What will the weather be and what should I do on each day?",
     tools: {
       getWeather: {
-        description: "Get the current weather at a location",
+        description: "Get the current weather at a location for specific dates",
         parameters: z.object({
           latitude: z.number(),
           longitude: z.number(),
+          endDate: z.string(),
         }),
-        execute: async ({ latitude, longitude }) => {
-          const response = await fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&hourly=temperature_2m&daily=sunrise,sunset&timezone=auto`
-          );
-          const weatherData = await response.json();
-          return weatherData;
+        execute: async ({ latitude, longitude, endDate }) => {
+          const forecastDays = calculateDaysFromNow(new Date(endDate));
+          const params = {
+            latitude: latitude,
+            longitude: longitude,
+            daily: ["temperature_2m_max", "temperature_2m_min"],
+            forecast_days: forecastDays,
+          };
+          const url = "https://api.open-meteo.com/v1/forecast";
+          const responses = await fetchWeatherApi(url, params);
+          const response = responses[0];
+          const daily = response.daily()!;
+          return daily;
         },
       },
       attractions: tool({
@@ -31,9 +47,9 @@ const main = async () => {
           temperature: z
             .number()
             .describe("The current temperature in Fahrenheit"),
+          date: z.string().describe("The date to get the attractions for"),
         }),
-        execute: async ({ location, temperature }) => {
-          const date = new Date().toISOString();
+        execute: async ({ location, temperature, date }) => {
           const result = await generateText({
             model: openai("gpt-4o-mini"),
             prompt: `What are 3 attractions in ${location} that I should see given it is ${temperature} outside and the ${date} is?`,
