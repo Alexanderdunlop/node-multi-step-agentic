@@ -13,8 +13,13 @@ const calculateDaysFromNow = (endDate: Date): number => {
 const main = async () => {
   const result = await generateText({
     model: openai("gpt-4o-mini"),
-    prompt:
-      "I am going to Luxembourg on this 6/12/24 - 8/12/24. What will the weather be and what should I do on each day?",
+    system:
+      `You help planning travel itineraries. ` +
+      `You have access to a weather API and a list of attractions. ` +
+      `Firstly provide the weather forecast for the dates the user is traveling. ` +
+      `Then respond with to the users' request with a list ` +
+      `of the best activities to do in their destination.`,
+    prompt: "I am going to Luxembourg on this 6/12/24 - 8/12/24.",
     tools: {
       getWeather: {
         description: "Get the current weather at a location for specific dates",
@@ -46,7 +51,7 @@ const main = async () => {
             .describe("The location to get the attractions for"),
           temperature: z
             .number()
-            .describe("The current temperature in Fahrenheit"),
+            .describe("The current temperature in Celsius"),
           date: z.string().describe("The date to get the attractions for"),
         }),
         execute: async ({ location, temperature, date }) => {
