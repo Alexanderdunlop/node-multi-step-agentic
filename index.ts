@@ -6,18 +6,22 @@ import { z } from "zod";
 const main = async () => {
   const result = await generateText({
     model: openai("gpt-4o-mini"),
-    prompt: "What is the weather in San Francisco and what should I do?",
+    prompt: "What is the weather in Luxembourg and what should I do?",
     tools: {
-      weather: tool({
-        description: "Get the weather in a location",
+      getWeather: {
+        description: "Get the current weather at a location",
         parameters: z.object({
-          location: z.string().describe("The location to get the weather for"),
+          latitude: z.number(),
+          longitude: z.number(),
         }),
-        execute: async ({ location }) => ({
-          location,
-          temperature: 72 + Math.floor(Math.random() * 21) - 10,
-        }),
-      }),
+        execute: async ({ latitude, longitude }) => {
+          const response = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&hourly=temperature_2m&daily=sunrise,sunset&timezone=auto`
+          );
+          const weatherData = await response.json();
+          return weatherData;
+        },
+      },
       attractions: tool({
         description: "Get the attractions in a location",
         parameters: z.object({
