@@ -33,9 +33,10 @@ const main = async () => {
             .describe("The current temperature in Fahrenheit"),
         }),
         execute: async ({ location, temperature }) => {
+          const date = new Date().toISOString();
           const result = await generateText({
             model: openai("gpt-4o-mini"),
-            prompt: `What are 3 attractions in ${location} that I should see given it is ${temperature} outside?`,
+            prompt: `What are 3 attractions in ${location} that I should see given it is ${temperature} outside and the ${date} is?`,
           });
           return result.text;
         },
